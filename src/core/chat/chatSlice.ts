@@ -34,8 +34,8 @@ const chatSlice = createSlice({
     addChat: (state, action: PayloadAction<Chat>) => {
       const newChat = {
         ...action.payload,
-        id: nanoid(), // Generate a unique ID for the new chat
-        createdBy: "currentUserId", // Replace 'currentUserId' with the actual user ID or identifier
+        id: nanoid(),
+        createdBy: "currentUserId",
       };
       state.chats.push(newChat);
     },
@@ -43,12 +43,43 @@ const chatSlice = createSlice({
       state.currentChat = action.payload;
     },
     addMessage: (state, action: PayloadAction<Message>) => {
-      if (state.currentChat) {
-        state.currentChat.messages.push(action.payload);
-      }
+      const updatedChats = state.chats.map((chat) => {
+        if (chat.id === state.currentChat?.id) {
+          const updatedChat = {
+            ...chat,
+            messages: [...chat.messages, action.payload],
+          };
+          return updatedChat;
+        }
+        return chat;
+      });
+
+      state.chats = updatedChats;
+      const updatedCurrentChat = updatedChats.find(
+        (chat) => chat.id === state.currentChat?.id
+      );
+      state.currentChat = updatedCurrentChat || state.currentChat;
+    },
+    simulateOtherUserMessage: (state, action: PayloadAction<Message>) => {
+      const updatedChats = state.chats.map((chat) => {
+        if (chat.id === state.currentChat?.id) {
+          const updatedChat = {
+            ...chat,
+            messages: [...chat.messages, action.payload],
+          };
+          return updatedChat;
+        }
+        return chat;
+      });
+
+      state.chats = updatedChats;
+      const updatedCurrentChat = updatedChats.find(
+        (chat) => chat.id === state.currentChat?.id
+      );
+      state.currentChat = updatedCurrentChat || state.currentChat;
     },
     deleteChat: (state, action: PayloadAction<string>) => {
-      const currentUserId = "currentUserId"; // Replace 'currentUserId' with the actual user ID or identifier
+      const currentUserId = "currentUserId";
       state.chats = state.chats.filter(
         (chat) => chat.createdBy !== currentUserId || chat.id !== action.payload
       );
@@ -59,6 +90,12 @@ const chatSlice = createSlice({
   },
 });
 
-export const { setChats, addChat, setCurrentChat, addMessage, deleteChat } =
-  chatSlice.actions;
+export const {
+  setChats,
+  addChat,
+  setCurrentChat,
+  addMessage,
+  simulateOtherUserMessage,
+  deleteChat,
+} = chatSlice.actions;
 export default chatSlice.reducer;

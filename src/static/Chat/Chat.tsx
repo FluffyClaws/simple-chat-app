@@ -11,7 +11,11 @@ import {
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "../../store";
-import { addMessage, deleteChat } from "../../core/chat/chatSlice";
+import {
+  addMessage,
+  deleteChat,
+  simulateOtherUserMessage,
+} from "../../core/chat/chatSlice";
 
 const Chat = () => {
   const [newMessage, setNewMessage] = useState("");
@@ -19,15 +23,20 @@ const Chat = () => {
   const dispatch = useDispatch();
   const [modalVisible, setModalVisible] = useState(false);
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
-  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (currentChat) {
-      setCurrentChatId(currentChat.id);
-    } else {
-      setCurrentChatId(null);
-    }
-  }, [currentChat]);
+    const interval = setInterval(() => {
+      const simulatedMessage = {
+        id: Date.now().toString(),
+        text: "This is a simulated message from another user.",
+        sender: "otherUser",
+        timestamp: Date.now(),
+      };
+      dispatch(simulateOtherUserMessage(simulatedMessage));
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [dispatch]);
 
   const handleLongPress = (chatId: string) => {
     setChatToDelete(chatId);
@@ -52,24 +61,34 @@ const Chat = () => {
       };
       dispatch(addMessage(message));
       setNewMessage("");
+    } else {
+      alert("Please enter a message.");
     }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.heading}>Chat: {currentChat?.name}</Text>
-      <TouchableOpacity onLongPress={() => handleLongPress(currentChatId!)}>
-        <FlatList
-          data={currentChat?.messages || []}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
+      <Text style={styles.heading}>
+        Chat: {currentChat ? currentChat.name : ""}
+      </Text>
+      <FlatList
+        data={currentChat?.messages || []}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            onLongPress={() => handleLongPress(currentChat?.id!)}
+          >
             <View style={styles.messageContainer}>
               <Text style={styles.sender}>{item.sender}</Text>
               <Text>{item.text}</Text>
+              <Text style={styles.timestamp}>
+                {new Date(item.timestamp).toLocaleString()}
+              </Text>
             </View>
-          )}
-        />
-      </TouchableOpacity>
+          </TouchableOpacity>
+        )}
+        extraData={currentChat}
+      />
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
@@ -120,6 +139,11 @@ const styles = StyleSheet.create({
   },
   sender: {
     fontWeight: "bold",
+  },
+  timestamp: {
+    fontSize: 12,
+    color: "#888",
+    marginTop: 4,
   },
   inputContainer: {
     flexDirection: "row",
