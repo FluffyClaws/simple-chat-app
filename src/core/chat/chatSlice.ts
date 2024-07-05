@@ -21,7 +21,12 @@ export interface Message {
 
 const initialState: ChatState = {
   chats: [],
-  currentChat: null,
+  currentChat: {
+    id: "",
+    name: "",
+    messages: [],
+    createdBy: "",
+  },
 };
 
 const chatSlice = createSlice({
@@ -42,6 +47,7 @@ const chatSlice = createSlice({
     setCurrentChat: (state, action: PayloadAction<Chat | null>) => {
       state.currentChat = action.payload;
     },
+
     addMessage: (state, action: PayloadAction<Message>) => {
       const updatedChats = state.chats.map((chat) => {
         if (chat.id === state.currentChat?.id) {
@@ -55,29 +61,11 @@ const chatSlice = createSlice({
       });
 
       state.chats = updatedChats;
-      const updatedCurrentChat = updatedChats.find(
-        (chat) => chat.id === state.currentChat?.id
-      );
-      state.currentChat = updatedCurrentChat || state.currentChat;
+      state.currentChat =
+        updatedChats.find((chat) => chat.id === state.currentChat?.id) ||
+        state.currentChat;
     },
-    simulateOtherUserMessage: (state, action: PayloadAction<Message>) => {
-      const updatedChats = state.chats.map((chat) => {
-        if (chat.id === state.currentChat?.id) {
-          const updatedChat = {
-            ...chat,
-            messages: [...chat.messages, action.payload],
-          };
-          return updatedChat;
-        }
-        return chat;
-      });
 
-      state.chats = updatedChats;
-      const updatedCurrentChat = updatedChats.find(
-        (chat) => chat.id === state.currentChat?.id
-      );
-      state.currentChat = updatedCurrentChat || state.currentChat;
-    },
     deleteChat: (state, action: PayloadAction<string>) => {
       const currentUserId = "currentUserId";
       state.chats = state.chats.filter(
@@ -90,12 +78,6 @@ const chatSlice = createSlice({
   },
 });
 
-export const {
-  setChats,
-  addChat,
-  setCurrentChat,
-  addMessage,
-  simulateOtherUserMessage,
-  deleteChat,
-} = chatSlice.actions;
+export const { setChats, addChat, setCurrentChat, addMessage, deleteChat } =
+  chatSlice.actions;
 export default chatSlice.reducer;

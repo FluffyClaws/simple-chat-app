@@ -14,29 +14,39 @@ import { RootState } from "../../store";
 import {
   addMessage,
   deleteChat,
-  simulateOtherUserMessage,
+  setCurrentChat,
 } from "../../core/chat/chatSlice";
+import { RouteProp } from "@react-navigation/native";
+import { StackNavigationProp } from "@react-navigation/stack";
 
-const Chat = () => {
+type RootStackParamList = {
+  Chat: { chatId: string };
+};
+type ChatRouteProp = RouteProp<RootStackParamList, "Chat">;
+type ChatNavigationProp = StackNavigationProp<RootStackParamList, "Chat">;
+
+const Chat = ({
+  route,
+}: {
+  route: ChatRouteProp;
+  navigation: ChatNavigationProp;
+}) => {
   const [newMessage, setNewMessage] = useState("");
   const currentChat = useSelector((state: RootState) => state.chat.currentChat);
   const dispatch = useDispatch();
   const [modalVisible, setModalVisible] = useState(false);
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
+  const chats = useSelector((state: RootState) => state.chat.chats);
+  const { chatId } = route.params ?? {};
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      const simulatedMessage = {
-        id: Date.now().toString(),
-        text: "This is a simulated message from another user.",
-        sender: "otherUser",
-        timestamp: Date.now(),
-      };
-      dispatch(simulateOtherUserMessage(simulatedMessage));
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [dispatch]);
+    if (chatId) {
+      const currentChat = chats.find((chat) => chat.id === chatId);
+      if (currentChat) {
+        dispatch(setCurrentChat(currentChat));
+      }
+    }
+  }, [chatId, chats, dispatch]);
 
   const handleLongPress = (chatId: string) => {
     setChatToDelete(chatId);
@@ -53,13 +63,26 @@ const Chat = () => {
 
   const handleSendMessage = () => {
     if (newMessage.trim() && currentChat) {
-      const message = {
+      const userMessage = {
         id: Date.now().toString(),
         text: newMessage.trim(),
         sender: "user",
         timestamp: Date.now(),
       };
-      dispatch(addMessage(message));
+      dispatch(addMessage(userMessage));
+      console.log("Message dispatched:", userMessage);
+
+      // Simulate other user's message with a delay
+      setTimeout(() => {
+        const simulatedMessage = {
+          id: Date.now().toString(),
+          text: "This is a simulated message from another user.",
+          sender: "otherUser",
+          timestamp: Date.now(),
+        };
+        dispatch(addMessage(simulatedMessage));
+      }, 2000); // Delay of 2 seconds (2000 milliseconds)
+
       setNewMessage("");
     } else {
       alert("Please enter a message.");
@@ -76,7 +99,7 @@ const Chat = () => {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <TouchableOpacity
-            onLongPress={() => handleLongPress(currentChat?.id!)}
+            onLongPress={() => currentChat && handleLongPress(currentChat.id)}
           >
             <View style={styles.messageContainer}>
               <Text style={styles.sender}>{item.sender}</Text>
@@ -87,8 +110,14 @@ const Chat = () => {
             </View>
           </TouchableOpacity>
         )}
-        extraData={currentChat}
+        extraData={currentChat?.messages}
+        ListEmptyComponent={
+          <Text style={{ textAlign: "center", marginTop: 16 }}>
+            No messages yet.
+          </Text>
+        }
       />
+
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
