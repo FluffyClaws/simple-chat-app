@@ -1,19 +1,31 @@
 import React from "react";
 import { View, Text, Button, StyleSheet } from "react-native";
 import { NavigationProp } from "@react-navigation/native";
+import { useDispatch } from "react-redux";
+import { fetchChatsAsync } from "../core/chat/chatSlice";
+import { AppDispatch } from "../store";
 
 type RootStackParamList = {
   Home: undefined;
 };
 
 type WelcomeScreenNavigationProp = NavigationProp<RootStackParamList, "Home">;
+
 const WelcomeScreen = ({
   navigation,
 }: {
   navigation: WelcomeScreenNavigationProp;
 }) => {
-  const handleOpenChatList = () => {
-    navigation.navigate("Home", undefined);
+  const dispatch = useDispatch<AppDispatch>();
+
+  const handleOpenChatList = async () => {
+    try {
+      await dispatch(fetchChatsAsync()).unwrap();
+      navigation.navigate("Home");
+    } catch (error) {
+      console.error("Failed to fetch chats:", error);
+      alert("Failed to fetch chats. Please try again.");
+    }
   };
 
   return (
