@@ -48,19 +48,6 @@ const Chat = ({
     }
   }, [chatId, chats, dispatch]);
 
-  const handleLongPress = (chatId: string) => {
-    setChatToDelete(chatId);
-    setModalVisible(true);
-  };
-
-  const handleDeleteChat = () => {
-    if (chatToDelete) {
-      dispatch(deleteChat(chatToDelete));
-      setModalVisible(false);
-      setChatToDelete(null);
-    }
-  };
-
   const handleSendMessage = () => {
     if (newMessage.trim() && currentChat) {
       const userMessage = {
@@ -98,9 +85,7 @@ const Chat = ({
         data={currentChat?.messages || []}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <TouchableOpacity
-            onLongPress={() => currentChat && handleLongPress(currentChat.id)}
-          >
+          <TouchableOpacity onLongPress={() => currentChat && currentChat.id}>
             <View style={styles.messageContainer}>
               <Text style={styles.sender}>{item.sender}</Text>
               <Text>{item.text}</Text>
@@ -137,10 +122,7 @@ const Chat = ({
             >
               <Text>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.modalButton}
-              onPress={handleDeleteChat}
-            >
+            <TouchableOpacity style={styles.modalButton}>
               <Text>Delete</Text>
             </TouchableOpacity>
           </View>

@@ -28,6 +28,7 @@ const Home = ({ navigation }: { navigation: HomeNavigationProp }) => {
   const dispatch = useDispatch();
   const [modalVisible, setModalVisible] = useState(false);
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
+  const currentUserId = "currentUserId";
 
   const filteredChats = chats.filter((chat) =>
     chat.name.toLowerCase().includes(searchQuery.toLowerCase())
