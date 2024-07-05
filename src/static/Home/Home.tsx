@@ -57,7 +57,12 @@ const Home = ({ navigation }: { navigation: HomeNavigationProp }) => {
 
   const handleDeleteChat = () => {
     if (chatToDelete) {
-      dispatch(deleteChat(chatToDelete));
+      const chat = chats.find((chat) => chat.id === chatToDelete);
+      if (chat && chat.createdBy === currentUserId) {
+        dispatch(deleteChat(chatToDelete));
+      } else {
+        alert("You can only delete chats created by you");
+      }
       setModalVisible(false);
       setChatToDelete(null);
     }

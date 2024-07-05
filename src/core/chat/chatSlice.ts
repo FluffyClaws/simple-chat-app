@@ -1,4 +1,5 @@
 import { createSlice, nanoid, PayloadAction } from "@reduxjs/toolkit";
+import { mockChats } from "../../utils/mockData";
 
 export interface ChatState {
   chats: Chat[];
@@ -20,7 +21,7 @@ export interface Message {
 }
 
 const initialState: ChatState = {
-  chats: [],
+  chats: mockChats,
   currentChat: {
     id: "",
     name: "",
@@ -68,11 +69,14 @@ const chatSlice = createSlice({
 
     deleteChat: (state, action: PayloadAction<string>) => {
       const currentUserId = "currentUserId";
-      state.chats = state.chats.filter(
-        (chat) => chat.createdBy !== currentUserId || chat.id !== action.payload
-      );
-      if (state.currentChat?.id === action.payload) {
-        state.currentChat = null;
+      const chat = state.chats.find((chat) => chat.id === action.payload);
+      if (chat && chat.createdBy === currentUserId) {
+        state.chats = state.chats.filter((chat) => chat.id !== action.payload);
+        if (state.currentChat?.id === action.payload) {
+          state.currentChat = null;
+        }
+      } else {
+        alert("You can only delete chats created by you");
       }
     },
   },
