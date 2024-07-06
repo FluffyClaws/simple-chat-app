@@ -10,12 +10,8 @@ import {
   Modal,
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
-import { RootState } from "../../store";
-import {
-  addMessage,
-  deleteChat,
-  setCurrentChat,
-} from "../../core/chat/chatSlice";
+import { AppDispatch, RootState } from "../../store";
+import { addMessageAsync, setCurrentChat } from "../../core/chat/chatSlice";
 import { RouteProp } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
 
@@ -33,11 +29,13 @@ const Chat = ({
 }) => {
   const [newMessage, setNewMessage] = useState("");
   const currentChat = useSelector((state: RootState) => state.chat.currentChat);
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
   const [modalVisible, setModalVisible] = useState(false);
-  const [chatToDelete, setChatToDelete] = useState<string | null>(null);
   const chats = useSelector((state: RootState) => state.chat.chats);
   const { chatId } = route.params ?? {};
+  const currentUserId = useSelector(
+    (state: RootState) => state.chat.currentUserId
+  );
 
   useEffect(() => {
     if (chatId) {
@@ -53,24 +51,23 @@ const Chat = ({
       const userMessage = {
         id: Date.now().toString(),
         text: newMessage.trim(),
-        sender: "user",
+        sender: currentUserId,
         timestamp: Date.now(),
       };
-      dispatch(addMessage(userMessage));
-      console.log("Message dispatched:", userMessage);
-
-      // Simulate other user's message with a delay
-      setTimeout(() => {
-        const simulatedMessage = {
-          id: Date.now().toString(),
-          text: "This is a simulated message from another user.",
-          sender: "otherUser",
-          timestamp: Date.now(),
-        };
-        dispatch(addMessage(simulatedMessage));
-      }, 2000); // Delay of 2 seconds (2000 milliseconds)
-
-      setNewMessage("");
+      dispatch(
+        addMessageAsync({ chatId: currentChat.id, message: userMessage })
+      )
+        .unwrap()
+        .then((result) => {
+          console.log("Message sent:", result);
+          setNewMessage("");
+        })
+        .catch((error) => {
+          console.error("Failed to send message:", error);
+          // The message is already added locally due to our error handling in the slice
+          setNewMessage("");
+          alert("Failed to send message to server. Message added locally.");
+        });
     } else {
       alert("Please enter a message.");
     }
