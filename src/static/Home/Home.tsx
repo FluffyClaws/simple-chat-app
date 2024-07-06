@@ -10,15 +10,29 @@ import {
   Modal,
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
-import { addChat, deleteChat } from "../../core/chat/chatSlice";
+import { addChat, deleteChat, setCurrentChat } from "../../core/chat/chatSlice";
 import { RootState } from "../../store";
+import { StackNavigationProp } from "@react-navigation/stack";
 
-const Home = () => {
+type RootStackParamList = {
+  Home: undefined;
+  Chat: { chatId: string };
+};
+
+type HomeNavigationProp = StackNavigationProp<RootStackParamList, "Home">;
+
+const Home = ({ navigation }: { navigation: HomeNavigationProp }) => {
   const [newChatName, setNewChatName] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const chats = useSelector((state: RootState) => state.chat.chats);
   const dispatch = useDispatch();
   const [modalVisible, setModalVisible] = useState(false);
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
+  const currentUserId = "currentUserId";
+
+  const filteredChats = chats.filter((chat) =>
+    chat.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const handleCreateChat = () => {
     if (newChatName.trim()) {
@@ -29,7 +43,10 @@ const Home = () => {
         createdBy: "user",
       };
       dispatch(addChat(newChat));
+      dispatch(setCurrentChat(newChat));
       setNewChatName("");
+    } else {
+      alert("Please enter a chat name.");
     }
   };
 
@@ -40,7 +57,12 @@ const Home = () => {
 
   const handleDeleteChat = () => {
     if (chatToDelete) {
-      dispatch(deleteChat(chatToDelete));
+      const chat = chats.find((chat) => chat.id === chatToDelete);
+      if (chat && chat.createdBy === currentUserId) {
+        dispatch(deleteChat(chatToDelete));
+      } else {
+        alert("You can only delete chats created by you");
+      }
       setModalVisible(false);
       setChatToDelete(null);
     }
@@ -49,11 +71,20 @@ const Home = () => {
   return (
     <View style={styles.container}>
       <Text style={styles.heading}>Chats</Text>
+      <TextInput
+        style={styles.searchInput}
+        placeholder="Search chats"
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+      />
       <FlatList
-        data={chats}
+        data={filteredChats}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <TouchableOpacity onLongPress={() => handleLongPress(item.id)}>
+          <TouchableOpacity
+            onLongPress={() => handleLongPress(item.id)}
+            onPress={() => navigation.navigate("Chat", { chatId: item.id })}
+          >
             <Text>{item.name}</Text>
           </TouchableOpacity>
         )}
@@ -98,6 +129,13 @@ const styles = StyleSheet.create({
   heading: {
     fontSize: 24,
     fontWeight: "bold",
+    marginBottom: 16,
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 4,
+    padding: 8,
     marginBottom: 16,
   },
   inputContainer: {

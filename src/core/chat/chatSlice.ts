@@ -1,4 +1,5 @@
 import { createSlice, nanoid, PayloadAction } from "@reduxjs/toolkit";
+import { mockChats } from "../../utils/mockData";
 
 export interface ChatState {
   chats: Chat[];
@@ -20,8 +21,13 @@ export interface Message {
 }
 
 const initialState: ChatState = {
-  chats: [],
-  currentChat: null,
+  chats: mockChats,
+  currentChat: {
+    id: "",
+    name: "",
+    messages: [],
+    createdBy: "",
+  },
 };
 
 const chatSlice = createSlice({
@@ -34,26 +40,43 @@ const chatSlice = createSlice({
     addChat: (state, action: PayloadAction<Chat>) => {
       const newChat = {
         ...action.payload,
-        id: nanoid(), // Generate a unique ID for the new chat
-        createdBy: "currentUserId", // Replace 'currentUserId' with the actual user ID or identifier
+        id: nanoid(),
+        createdBy: "currentUserId",
       };
       state.chats.push(newChat);
     },
     setCurrentChat: (state, action: PayloadAction<Chat | null>) => {
       state.currentChat = action.payload;
     },
+
     addMessage: (state, action: PayloadAction<Message>) => {
-      if (state.currentChat) {
-        state.currentChat.messages.push(action.payload);
-      }
+      const updatedChats = state.chats.map((chat) => {
+        if (chat.id === state.currentChat?.id) {
+          const updatedChat = {
+            ...chat,
+            messages: [...chat.messages, action.payload],
+          };
+          return updatedChat;
+        }
+        return chat;
+      });
+
+      state.chats = updatedChats;
+      state.currentChat =
+        updatedChats.find((chat) => chat.id === state.currentChat?.id) ||
+        state.currentChat;
     },
+
     deleteChat: (state, action: PayloadAction<string>) => {
-      const currentUserId = "currentUserId"; // Replace 'currentUserId' with the actual user ID or identifier
-      state.chats = state.chats.filter(
-        (chat) => chat.createdBy !== currentUserId || chat.id !== action.payload
-      );
-      if (state.currentChat?.id === action.payload) {
-        state.currentChat = null;
+      const currentUserId = "currentUserId";
+      const chat = state.chats.find((chat) => chat.id === action.payload);
+      if (chat && chat.createdBy === currentUserId) {
+        state.chats = state.chats.filter((chat) => chat.id !== action.payload);
+        if (state.currentChat?.id === action.payload) {
+          state.currentChat = null;
+        }
+      } else {
+        alert("You can only delete chats created by you");
       }
     },
   },

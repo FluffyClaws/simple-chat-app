@@ -11,65 +11,98 @@ import {
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "../../store";
-import { addMessage, deleteChat } from "../../core/chat/chatSlice";
+import {
+  addMessage,
+  deleteChat,
+  setCurrentChat,
+} from "../../core/chat/chatSlice";
+import { RouteProp } from "@react-navigation/native";
+import { StackNavigationProp } from "@react-navigation/stack";
 
-const Chat = () => {
+type RootStackParamList = {
+  Chat: { chatId: string };
+};
+type ChatRouteProp = RouteProp<RootStackParamList, "Chat">;
+type ChatNavigationProp = StackNavigationProp<RootStackParamList, "Chat">;
+
+const Chat = ({
+  route,
+}: {
+  route: ChatRouteProp;
+  navigation: ChatNavigationProp;
+}) => {
   const [newMessage, setNewMessage] = useState("");
   const currentChat = useSelector((state: RootState) => state.chat.currentChat);
   const dispatch = useDispatch();
   const [modalVisible, setModalVisible] = useState(false);
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
-  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const chats = useSelector((state: RootState) => state.chat.chats);
+  const { chatId } = route.params ?? {};
 
   useEffect(() => {
-    if (currentChat) {
-      setCurrentChatId(currentChat.id);
-    } else {
-      setCurrentChatId(null);
+    if (chatId) {
+      const currentChat = chats.find((chat) => chat.id === chatId);
+      if (currentChat) {
+        dispatch(setCurrentChat(currentChat));
+      }
     }
-  }, [currentChat]);
-
-  const handleLongPress = (chatId: string) => {
-    setChatToDelete(chatId);
-    setModalVisible(true);
-  };
-
-  const handleDeleteChat = () => {
-    if (chatToDelete) {
-      dispatch(deleteChat(chatToDelete));
-      setModalVisible(false);
-      setChatToDelete(null);
-    }
-  };
+  }, [chatId, chats, dispatch]);
 
   const handleSendMessage = () => {
     if (newMessage.trim() && currentChat) {
-      const message = {
+      const userMessage = {
         id: Date.now().toString(),
         text: newMessage.trim(),
         sender: "user",
         timestamp: Date.now(),
       };
-      dispatch(addMessage(message));
+      dispatch(addMessage(userMessage));
+      console.log("Message dispatched:", userMessage);
+
+      // Simulate other user's message with a delay
+      setTimeout(() => {
+        const simulatedMessage = {
+          id: Date.now().toString(),
+          text: "This is a simulated message from another user.",
+          sender: "otherUser",
+          timestamp: Date.now(),
+        };
+        dispatch(addMessage(simulatedMessage));
+      }, 2000); // Delay of 2 seconds (2000 milliseconds)
+
       setNewMessage("");
+    } else {
+      alert("Please enter a message.");
     }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.heading}>Chat: {currentChat?.name}</Text>
-      <TouchableOpacity onLongPress={() => handleLongPress(currentChatId!)}>
-        <FlatList
-          data={currentChat?.messages || []}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
+      <Text style={styles.heading}>
+        Chat: {currentChat ? currentChat.name : ""}
+      </Text>
+      <FlatList
+        data={currentChat?.messages || []}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <TouchableOpacity onLongPress={() => currentChat && currentChat.id}>
             <View style={styles.messageContainer}>
               <Text style={styles.sender}>{item.sender}</Text>
               <Text>{item.text}</Text>
+              <Text style={styles.timestamp}>
+                {new Date(item.timestamp).toLocaleString()}
+              </Text>
             </View>
-          )}
-        />
-      </TouchableOpacity>
+          </TouchableOpacity>
+        )}
+        extraData={currentChat?.messages}
+        ListEmptyComponent={
+          <Text style={{ textAlign: "center", marginTop: 16 }}>
+            No messages yet.
+          </Text>
+        }
+      />
+
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
@@ -89,10 +122,7 @@ const Chat = () => {
             >
               <Text>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.modalButton}
-              onPress={handleDeleteChat}
-            >
+            <TouchableOpacity style={styles.modalButton}>
               <Text>Delete</Text>
             </TouchableOpacity>
           </View>
@@ -120,6 +150,11 @@ const styles = StyleSheet.create({
   },
   sender: {
     fontWeight: "bold",
+  },
+  timestamp: {
+    fontSize: 12,
+    color: "#888",
+    marginTop: 4,
   },
   inputContainer: {
     flexDirection: "row",
