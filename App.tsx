@@ -2,10 +2,10 @@ import React from "react";
 import { Provider } from "react-redux";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
-import Home from "./src/static/Home/Home";
-import Chat from "./src/static/Chat/Chat";
-import store from "./src/store";
-import WelcomeScreen from "./src/static/WelcomeScreen";
+import Home from "./app/static/Home/Home";
+import Chat from "./app/static/Chat/Chat";
+import store from "./app/store";
+import WelcomeScreen from "./app/static/WelcomeScreen";
 
 type RootStackParamList = {
   Welcome: undefined;
