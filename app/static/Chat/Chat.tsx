@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import { AppDispatch, RootState } from "../../store";
 import { addMessageAsync, setCurrentChat } from "../../core/chat/chatSlice";
 import { RouteProp } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
+import { useWebSocketConnection } from "../../core/websocket/websocketService";
 
 type RootStackParamList = {
   Chat: { chatId: string };
@@ -23,6 +24,7 @@ type ChatNavigationProp = StackNavigationProp<RootStackParamList, "Chat">;
 
 const Chat = ({
   route,
+  navigation,
 }: {
   route: ChatRouteProp;
   navigation: ChatNavigationProp;
@@ -37,6 +39,17 @@ const Chat = ({
     (state: RootState) => state.chat.currentUserId
   );
 
+  const { connect, disconnect, sendChatMessage, connectionStatus } =
+    useWebSocketConnection();
+
+  const handleConnect = useCallback(() => {
+    connect();
+  }, [connect]);
+
+  const handleDisconnect = useCallback(() => {
+    disconnect();
+  }, [disconnect]);
+
   useEffect(() => {
     if (chatId) {
       const currentChat = chats.find((chat) => chat.id === chatId);
@@ -44,9 +57,13 @@ const Chat = ({
         dispatch(setCurrentChat(currentChat));
       }
     }
-  }, [chatId, chats, dispatch]);
+    handleConnect(); // Connect when entering the chat
+    return () => {
+      handleDisconnect(); // Disconnect when leaving the chat
+    };
+  }, [chatId, dispatch, handleConnect, handleDisconnect]);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (newMessage.trim() && currentChat) {
       const userMessage = {
         id: Date.now().toString(),
@@ -54,20 +71,29 @@ const Chat = ({
         sender: currentUserId,
         timestamp: Date.now(),
       };
-      dispatch(
-        addMessageAsync({ chatId: currentChat.id, message: userMessage })
-      )
-        .unwrap()
-        .then((result) => {
-          console.log("Message sent:", result);
-          setNewMessage("");
-        })
-        .catch((error) => {
-          console.error("Failed to send message:", error);
-          // The message is already added locally due to our error handling in the slice
-          setNewMessage("");
-          alert("Failed to send message to server. Message added locally.");
-        });
+
+      try {
+        // Send message via simulated WebSocket
+        await sendChatMessage(currentChat.id, newMessage.trim());
+
+        // Keep the existing API call
+        dispatch(
+          addMessageAsync({ chatId: currentChat.id, message: userMessage })
+        )
+          .unwrap()
+          .then((result) => {
+            console.log("Message sent:", result);
+            setNewMessage("");
+          })
+          .catch((error) => {
+            console.error("Failed to send message:", error);
+            setNewMessage("");
+            alert("Failed to send message to server. Message added locally.");
+          });
+      } catch (error) {
+        console.error("Failed to send message via WebSocket:", error);
+        // The existing API call will still try to send the message
+      }
     } else {
       alert("Please enter a message.");
     }
