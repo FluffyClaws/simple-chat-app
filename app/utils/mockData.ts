@@ -1,4 +1,4 @@
-import { Chat } from "../core/chat/chatSlice";
+import { Chat } from "../core/chat/chatTypes";
 
 export const mockChats: Chat[] = [
   {
@@ -33,4 +33,16 @@ export const mockChats: Chat[] = [
     ],
     createdBy: "otherUserId",
   },
+  {
+    id: "3",
+    name: "user created",
+    messages: [],
+    createdBy: "admin",
+  },
 ];
+
+export const mockWebSocketResponses = {
+  connect: true,
+  disconnect: true,
+  sendMessage: true,
+};

@@ -6,7 +6,7 @@ import {
   deleteChat,
   addMessage,
 } from "./chatService";
-import { mockChats } from "../../utils/mockData";
+import { Chat, Message } from "./chatTypes";
 import { AxiosError } from "axios";
 
 export interface ChatState {
@@ -17,22 +17,8 @@ export interface ChatState {
   currentUserId: string;
 }
 
-export interface Chat {
-  id: string;
-  name: string;
-  messages: Message[];
-  createdBy: string;
-}
-
-export interface Message {
-  id: string;
-  text: string;
-  sender: string;
-  timestamp: number;
-}
-
 const initialState: ChatState = {
-  chats: mockChats,
+  chats: [],
   currentChat: null,
   loading: false,
   error: null,
@@ -212,10 +198,10 @@ const chatSlice = createSlice({
         state.loading = false;
         const { chatId, message } = action.payload;
         const chat = state.chats.find((c) => c.id === chatId);
-        if (chat) {
+        if (chat && message) {
           chat.messages.push(message);
         }
-        if (state.currentChat && state.currentChat.id === chatId) {
+        if (state.currentChat && state.currentChat.id === chatId && message) {
           state.currentChat.messages.push(message);
         }
       })

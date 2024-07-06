@@ -5,29 +5,16 @@ import {
   TextInput,
   Button,
   FlatList,
-  StyleSheet,
   TouchableOpacity,
-  Modal,
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  addChatAsync,
-  deleteChatAsync,
-  fetchChatsAsync,
-  setCurrentChat,
-  updateChatAsync,
-} from "../../core/chat/chatSlice";
 import { AppDispatch, RootState } from "../../store";
-import { StackNavigationProp } from "@react-navigation/stack";
+import { homeStyles, modalStyles, sharedStyles } from "../../shared/styles";
+import Modal from "../../shared/components/Modal";
+import { homeService } from "../../core/home/homeService";
+import { NavigationProps } from "../../shared/types";
 
-type RootStackParamList = {
-  Home: undefined;
-  Chat: { chatId: string };
-};
-
-type HomeNavigationProp = StackNavigationProp<RootStackParamList, "Home">;
-
-const Home = ({ navigation }: { navigation: HomeNavigationProp }) => {
+const Home: React.FC<NavigationProps<"Home">> = ({ navigation }) => {
   const [newChatName, setNewChatName] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const dispatch = useDispatch<AppDispatch>();
@@ -41,29 +28,13 @@ const Home = ({ navigation }: { navigation: HomeNavigationProp }) => {
   const chats = useSelector((state: RootState) => state.chat.chats);
   const loading = useSelector((state: RootState) => state.chat.loading);
   const error = useSelector((state: RootState) => state.chat.error);
-  const filteredChats = chats.filter((chat) =>
-    chat.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredChats = homeService.filterChats(chats, searchQuery);
 
   const handleCreateChat = () => {
-    if (newChatName.trim()) {
-      const newChat = {
-        name: newChatName.trim(),
-        createdBy: currentUserId,
-      };
-      dispatch(addChatAsync(newChat))
-        .unwrap()
-        .then((result) => {
-          setNewChatName("");
-          console.log("Chat created:", result);
-        })
-        .catch((error) => {
-          console.error("Failed to create chat:", error);
-          alert("Failed to create chat. Using local data instead.");
-        });
-    } else {
-      alert("Please enter a chat name.");
-    }
+    homeService
+      .createChat(dispatch, newChatName, currentUserId)
+      .then(() => setNewChatName(""))
+      .catch((error) => alert(error.message));
   };
 
   const handleLongPress = (chatId: string) => {
@@ -73,65 +44,41 @@ const Home = ({ navigation }: { navigation: HomeNavigationProp }) => {
 
   const handleDeleteChat = () => {
     if (chatToDelete) {
-      const chat = chats.find((chat) => chat.id === chatToDelete);
-      if (chat && chat.createdBy === currentUserId) {
-        dispatch(deleteChatAsync(chatToDelete))
-          .unwrap()
-          .then(() => {
-            console.log("Chat deleted successfully");
-          })
-          .catch((error) => {
-            console.error("Failed to delete chat:", error);
-            alert("Failed to delete chat from server. Chat removed locally.");
-          });
-      } else {
-        alert("You can only delete chats created by you");
-      }
-      setModalVisible(false);
-      setChatToDelete(null);
+      homeService
+        .deleteChat(dispatch, chatToDelete, chats, currentUserId)
+        .then(() => {
+          setModalVisible(false);
+          setChatToDelete(null);
+        })
+        .catch((error) => alert(error.message));
     }
   };
 
   const handleRenameChat = (chatId: string) => {
     const chat = chats.find((c) => c.id === chatId);
-    if (chat && chat.createdBy === currentUserId) {
+    if (chat) {
       setChatToRename(chatId);
       setNewChatName(chat.name);
       setRenameModalVisible(true);
-    } else {
-      alert("You can only rename chats created by you");
     }
   };
 
   const confirmRenameChat = () => {
-    if (chatToRename && newChatName.trim()) {
-      dispatch(
-        updateChatAsync({
-          chatId: chatToRename,
-          chat: { name: newChatName.trim() },
-        })
-      )
-        .unwrap()
-        .then((result) => {
-          console.log("Chat renamed successfully:", result);
+    if (chatToRename) {
+      homeService
+        .renameChat(dispatch, chatToRename, newChatName, chats, currentUserId)
+        .then(() => {
           setRenameModalVisible(false);
           setChatToRename(null);
           setNewChatName("");
         })
-        .catch((error) => {
-          console.error("Failed to rename chat:", error);
-          alert(
-            typeof error === "string"
-              ? error
-              : "Failed to rename chat. Please try again."
-          );
-        });
+        .catch((error) => alert(error.message));
     }
   };
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <View style={sharedStyles.container}>
         <Text>Loading chats...</Text>
       </View>
     );
@@ -139,21 +86,24 @@ const Home = ({ navigation }: { navigation: HomeNavigationProp }) => {
 
   if (error) {
     return (
-      <View style={styles.container}>
+      <View style={sharedStyles.container}>
         <Text>
           Error:{" "}
           {typeof error === "string" ? error : "An unknown error occurred"}
         </Text>
-        <Button title="Retry" onPress={() => dispatch(fetchChatsAsync())} />
+        <Button
+          title="Retry"
+          onPress={() => homeService.retryFetchChats(dispatch)}
+        />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.heading}>Chats</Text>
+    <View style={sharedStyles.container}>
+      <Text style={sharedStyles.heading}>Chats</Text>
       <TextInput
-        style={styles.searchInput}
+        style={homeStyles.searchInput}
         placeholder="Search chats"
         value={searchQuery}
         onChangeText={setSearchQuery}
@@ -163,137 +113,57 @@ const Home = ({ navigation }: { navigation: HomeNavigationProp }) => {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <TouchableOpacity
+            onPress={() =>
+              homeService.navigateToChat(dispatch, item, navigation)
+            }
             onLongPress={() => handleLongPress(item.id)}
-            onPress={() => {
-              dispatch(setCurrentChat(item));
-              navigation.navigate("Chat", { chatId: item.id });
-            }}
           >
-            <View style={styles.chatItem}>
-              <Text>{item.name}</Text>
+            <View style={homeStyles.chatItem}>
+              <Text style={homeStyles.chatName}>{item.name}</Text>
               {item.createdBy === currentUserId && (
                 <TouchableOpacity onPress={() => handleRenameChat(item.id)}>
-                  <Text style={styles.renameButton}>Rename</Text>
+                  <Text style={homeStyles.renameButton}>Rename</Text>
                 </TouchableOpacity>
               )}
             </View>
           </TouchableOpacity>
         )}
       />
-      <View style={styles.inputContainer}>
+      <View style={homeStyles.inputContainer}>
         <TextInput
-          style={styles.input}
+          style={homeStyles.newChatInput}
           placeholder="New chat name"
           value={newChatName}
           onChangeText={setNewChatName}
         />
-        <Button title="Create" onPress={handleCreateChat} />
+        <TouchableOpacity
+          style={sharedStyles.button}
+          onPress={handleCreateChat}
+        >
+          <Text style={sharedStyles.buttonText}>Create</Text>
+        </TouchableOpacity>
       </View>
-      <Modal visible={modalVisible} animationType="slide">
-        <View style={styles.modalContainer}>
-          <Text>Delete Chat?</Text>
-          <View style={styles.modalButtons}>
-            <TouchableOpacity
-              style={styles.modalButton}
-              onPress={() => setModalVisible(false)}
-            >
-              <Text>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.modalButton}
-              onPress={handleDeleteChat}
-            >
-              <Text>Delete</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-      <Modal visible={renameModalVisible} animationType="slide">
-        <View style={styles.modalContainer}>
-          <Text>Rename Chat</Text>
-          <TextInput
-            style={styles.input}
-            value={newChatName}
-            onChangeText={setNewChatName}
-            placeholder="Enter new chat name"
-          />
-          <View style={styles.modalButtons}>
-            <TouchableOpacity
-              style={styles.modalButton}
-              onPress={() => setRenameModalVisible(false)}
-            >
-              <Text>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.modalButton}
-              onPress={confirmRenameChat}
-            >
-              <Text>Rename</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+      <Modal
+        visible={modalVisible}
+        title="Delete Chat?"
+        onConfirm={handleDeleteChat}
+        onCancel={() => setModalVisible(false)}
+      />
+      <Modal
+        visible={renameModalVisible}
+        title="Rename Chat"
+        onConfirm={confirmRenameChat}
+        onCancel={() => setRenameModalVisible(false)}
+      >
+        <TextInput
+          style={modalStyles.modalInput}
+          value={newChatName}
+          onChangeText={setNewChatName}
+          placeholder="Enter new chat name"
+        />
       </Modal>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-  },
-  heading: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 16,
-  },
-  searchInput: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 4,
-    padding: 8,
-    marginBottom: 16,
-  },
-  chatItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ccc",
-  },
-  renameButton: {
-    color: "blue",
-  },
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 16,
-  },
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 4,
-    padding: 8,
-    marginRight: 8,
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalButtons: {
-    flexDirection: "row",
-    marginTop: 16,
-  },
-  modalButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: "#ccc",
-    marginHorizontal: 8,
-    borderRadius: 4,
-  },
-});
 
 export default Home;
