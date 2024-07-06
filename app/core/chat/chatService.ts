@@ -1,5 +1,6 @@
 import axios from "axios";
-import { Chat, Message } from "./chatSlice";
+import { Chat, Message } from "./chatTypes";
+import { mockChats } from "../../utils/mockData";
 
 const API_URL =
   "https://c3a2dcba-a1c5-4a7f-896c-a292d8427caf.mock.pstmn.io/chats";
@@ -11,6 +12,15 @@ const axiosInstance = axios.create({
     Accept: "application/json",
   },
 });
+
+const handleError = (error: any) => {
+  if (axios.isAxiosError(error)) {
+    console.error("Error:", error.response?.status, error.response?.data);
+  } else {
+    console.error("Error:", error);
+  }
+  throw error;
+};
 
 export const addMessage = async (chatId: string, message: Message) => {
   try {
@@ -31,16 +41,7 @@ export const addMessage = async (chatId: string, message: Message) => {
       id: response.data.id,
     };
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      console.error(
-        "Error adding message:",
-        error.response?.status,
-        error.response?.data
-      );
-    } else {
-      console.error("Error adding message:", error);
-    }
-    throw error;
+    handleError(error);
   }
 };
 
@@ -50,16 +51,9 @@ export const fetchChats = async (): Promise<{ chats: Chat[] }> => {
     console.log("Fetch chats response:", response.data);
     return response.data;
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      console.error(
-        "Error fetching chats:",
-        error.response?.status,
-        error.response?.data
-      );
-    } else {
-      console.error("Error fetching chats:", error);
-    }
-    throw error;
+    // If the API fails, return mock data
+    console.error("Failed to fetch chats from API, using mock data");
+    return { chats: mockChats };
   }
 };
 
@@ -79,16 +73,7 @@ export const createChat = async (chat: { name: string; createdBy: string }) => {
       createdBy: chat.createdBy,
     };
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      console.error(
-        "Error creating chat:",
-        error.response?.status,
-        error.response?.data
-      );
-    } else {
-      console.error("Error creating chat:", error);
-    }
-    throw error;
+    handleError(error);
   }
 };
 
@@ -114,16 +99,7 @@ export const updateChat = async (chatId: string, chat: { name: string }) => {
 
     return updatedChat;
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      console.error(
-        "Error updating chat:",
-        error.response?.status,
-        error.response?.data
-      );
-    } else {
-      console.error("Error updating chat:", error);
-    }
-    throw error;
+    handleError(error);
   }
 };
 
@@ -136,15 +112,6 @@ export const deleteChat = async (chatId: string) => {
     console.log("Delete chat response:", response.data);
     return response.data;
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      console.error(
-        "Error deleting chat:",
-        error.response?.status,
-        error.response?.data
-      );
-    } else {
-      console.error("Error deleting chat:", error);
-    }
-    throw error;
+    handleError(error);
   }
 };
