@@ -116,6 +116,7 @@ const Home: React.FC<NavigationProps<"Home">> = ({ navigation }) => {
             onPress={() =>
               homeService.navigateToChat(dispatch, item, navigation)
             }
+            onLongPress={() => handleLongPress(item.id)}
           >
             <View style={homeStyles.chatItem}>
               <Text style={homeStyles.chatName}>{item.name}</Text>

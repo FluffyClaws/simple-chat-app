@@ -33,6 +33,12 @@ export const mockChats: Chat[] = [
     ],
     createdBy: "otherUserId",
   },
+  {
+    id: "3",
+    name: "user created",
+    messages: [],
+    createdBy: "admin",
+  },
 ];
 
 export const mockWebSocketResponses = {

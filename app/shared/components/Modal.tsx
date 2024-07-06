@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, TouchableOpacity, Modal as RNModal } from "react-native";
-import { modalStyles, sharedStyles } from "../styles";
+import { modalStyles } from "../styles";
 
 interface ModalProps {
   visible: boolean;

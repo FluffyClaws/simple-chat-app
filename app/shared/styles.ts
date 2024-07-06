@@ -57,12 +57,14 @@ export const sharedStyles = StyleSheet.create({
 export const chatStyles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: commonColors.background,
   },
   messageList: {
     flex: 1,
     width: "100%",
     paddingHorizontal: 15,
     paddingVertical: 10,
+    paddingBottom: 100,
   },
   inputContainer: {
     flexDirection: "row",
@@ -74,10 +76,14 @@ export const chatStyles = StyleSheet.create({
     backgroundColor: commonColors.white,
   },
   messageInput: {
-    ...sharedStyles.input,
     flex: 1,
     marginRight: 10,
-    marginBottom: 0,
+    backgroundColor: commonColors.background,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    fontSize: 16,
+    maxHeight: 100, // Limit the height of the input
   },
   sendButton: {
     marginLeft: 10,
@@ -234,9 +240,11 @@ export const messageItemStyles = StyleSheet.create({
   },
   ownMessage: {
     alignSelf: "flex-end",
+    marginLeft: 40,
   },
   otherMessage: {
     alignSelf: "flex-start",
+    marginRight: 40,
   },
   bubble: {
     borderRadius: 20,
@@ -263,6 +271,6 @@ export const messageItemStyles = StyleSheet.create({
     fontSize: 12,
     color: commonColors.lightText,
     marginTop: 4,
-    alignSelf: "flex-end",
+    marginHorizontal: 4,
   },
 });

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   FlatList,
   KeyboardAvoidingView,
   SafeAreaView,
+  Keyboard,
 } from "react-native";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store";
@@ -30,17 +31,48 @@ const Chat: React.FC<ChatScreenProps> = ({ route }) => {
   const currentChat = useSelector((state: RootState) => state.chat.currentChat);
   const { connectionStatus } = useChatWebSocket();
   const sendMessage = useSendMessage();
+  const flatListRef = useRef<FlatList>(null);
 
   useChatInitialization(chatId);
 
   const handleSendMessage = async () => {
+    if (newMessage.trim() === "") return;
     try {
       await sendMessage(newMessage);
       setNewMessage("");
+      scrollToEnd();
     } catch (error) {
       alert(error instanceof Error ? error.message : "An error occurred");
     }
   };
+
+  const scrollToEnd = useCallback(() => {
+    if (flatListRef.current) {
+      flatListRef.current.scrollToEnd({ animated: true });
+    }
+  }, []);
+
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      "keyboardDidShow",
+      scrollToEnd
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      "keyboardDidHide",
+      scrollToEnd
+    );
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, [scrollToEnd]);
+
+  useEffect(() => {
+    if (currentChat && currentChat.messages.length > 0) {
+      scrollToEnd();
+    }
+  }, [currentChat?.messages, scrollToEnd]);
 
   if (!currentChat) {
     return (
@@ -54,6 +86,7 @@ const Chat: React.FC<ChatScreenProps> = ({ route }) => {
     <SafeAreaView style={chatStyles.container}>
       <KeyboardAvoidingView style={chatStyles.container}>
         <FlatList
+          ref={flatListRef}
           style={chatStyles.messageList}
           data={currentChat.messages}
           keyExtractor={(item) => item.id}
@@ -68,6 +101,7 @@ const Chat: React.FC<ChatScreenProps> = ({ route }) => {
             placeholder="Type a message"
             value={newMessage}
             onChangeText={setNewMessage}
+            multiline
           />
           <TouchableOpacity
             style={chatStyles.sendButton}
